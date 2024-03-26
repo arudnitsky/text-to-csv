@@ -11,22 +11,27 @@ def call_api(line):
     with requests.session() as session:
         session.mount("https://", adapter)
         response = session.post(
-            url, json={"text": line, "source_lang": "uk", "target_lang": "en-us"}
+            url, json={"text": [line], "source_lang": "uk", "target_lang": "en-us"}
         )
+        print(response.json()[0])
     return {
-        "text": response.json()["stressed_text"],
-        "translation": response.json()["translation"],
+        "text": response.json()[0]["stressed_text"],
+        "translation": response.json()[0]["translation"],
     }
 
 
 def process_file(file_path):
+    unique_lines = set()
     with open(file_path, "r") as file:
         for line in file:
             line = line.strip()
             if line == "" or line.startswith("#"):
                 continue
-            api_result = call_api(line)
-            print(f'"{api_result["text"]}","{api_result["translation"]}"')
+            unique_lines.add(line)
+
+    for line in unique_lines:
+        api_result = call_api(line)
+        print(f'"{api_result["text"]}","{api_result["translation"]}"')
 
 
 process_file("words.txt")
