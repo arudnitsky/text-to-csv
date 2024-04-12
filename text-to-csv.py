@@ -42,8 +42,8 @@ def call_api(
         response = session.post(url, json=translation_request.dict())
         # Assuming the response is a list of DeeplTranslateResponse objects
         api_result = [DeeplTranslateResponse(**item) for item in response.json()]
-        print( response)
-        print (response.json())
+        print(response)
+        print(response.json())
         return api_result
 
 
