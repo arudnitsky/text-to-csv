@@ -51,9 +51,9 @@ def deduplicate_and_save_batch(batch: List[DeeplTranslateResponse]):
         csv_line = f'"{item.text_stressed_lemma}'
         if " " in item.text or item.text == item.text_lemma:
             # phrase or text is the same as lemma. No need to print lemma
-            csv_line += '", '
+            csv_line += '",'
         else:
-            csv_line += f' ({item.stressed_text})", '
+            csv_line += f' ({item.stressed_text})",'
         csv_line += f'"{item.translation_stressed_lemma}"'
 
         if (item.text_stressed_lemma) in deduplicated_entries:
