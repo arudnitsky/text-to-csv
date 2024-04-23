@@ -53,16 +53,18 @@ def deduplicate_and_save_batch(batch: List[DeeplTranslateResponse]):
             # phrase or text is the same as lemma. No need to print lemma
             csv_line += '",'
         else:
-            csv_line += f' ({item.stressed_text})",'
+            # csv_line += f' ({item.stressed_text})",'
+            csv_line += '",'
         csv_line += f'"{item.translation_stressed_lemma}"'
 
-        if (item.text_stressed_lemma) in deduplicated_entries:
-            saved_line = deduplicated_entries[item.text_stressed_lemma]
-            if len(csv_line) > len(saved_line):
-                # keep the longer item
-                deduplicated_entries[item.text_stressed_lemma] = csv_line
-        else:
-            deduplicated_entries[item.text_stressed_lemma] = csv_line
+        # if (item.text_stressed_lemma) in deduplicated_entries:
+        #     saved_line = deduplicated_entries[item.text_stressed_lemma]
+        #     if len(csv_line) > len(saved_line):
+        #         # keep the longer item
+        #         deduplicated_entries[item.text_stressed_lemma] = csv_line
+        # else:
+        #     deduplicated_entries[item.text_stressed_lemma] = csv_line
+        deduplicated_entries[item.text_stressed_lemma] = csv_line
 
 
 def print_only_if_redirected(message: str):
@@ -99,8 +101,8 @@ def process_input_file(file_path: str):
 
         deduplicate_and_save_batch(api_result)
 
-        for line in deduplicated_entries.values():
-            print(line)
+    for line in deduplicated_entries.values():
+        print(line)
 
     print_only_if_redirected("Done.\n")
 
