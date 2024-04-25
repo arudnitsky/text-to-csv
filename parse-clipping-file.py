@@ -1,4 +1,7 @@
 import string
+import sys
+from io import TextIOWrapper
+from typing import Generator
 
 from pydantic import BaseModel
 
@@ -16,7 +19,7 @@ def cleanup_line( line:str) -> str:
     line = line[:1].lower() + line[1:]
     return line
 
-def read_in_clipping(file_object ):
+def read_in_clipping(file_object: TextIOWrapper ) -> Generator[Clipping, None, None]:
     """Lazy function (generator) to read a file piece by piece and group them into Clipping instances."""
     chunk_size=5
     while True:
@@ -39,12 +42,20 @@ def read_in_clipping(file_object ):
         else:
             raise ValueError(f"Truncated data. Did not read {chunk_size} lines.")
 
-def print_word(file_path):
+def process_input_file(file_path: str):
     with open(file_path, 'r') as file:
         for clippings in read_in_clipping(file):
             if clippings:
                 print(clippings.highlight)
 
-# Example usage
-file_path = 'Код Катаріни Clippings.txt' # Replace with your actual file path
-print_word(file_path)
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        sys.stderr.write(f"Usage: {sys.argv[0]} file_to_process\n\n")
+        sys.stderr.write(
+            f"{sys.argv[0]} Parses a Kindle clippings file and prints highlights\n"
+        )
+
+        exit(1)
+
+    process_input_file(sys.argv[1])
+    exit(0)
