@@ -113,7 +113,7 @@ def read_in_clipping(file_object: TextIOWrapper) -> Generator[Clipping, None, No
         yield clipping
 
 
-def process_input_file(file_path: str, search_string=None):
+def process_input_file(file_path: str, filter=None):
     with open(file_path, "r", encoding="utf-8-sig") as file:
         for clipping in read_in_clipping(file):
             if not clipping:
@@ -121,8 +121,8 @@ def process_input_file(file_path: str, search_string=None):
             if clipping.type == "unknown":
                 break
             if clipping.type == "highlight":
-                if search_string != None:
-                    if search_string.casefold() in clipping.title_and_author.casefold():
+                if filter != None:
+                    if filter.casefold() in clipping.title_and_author.casefold():
                         if clipping.highlight != None:
                             cleanup_clipping(clipping)
                             print(clipping.highlight)
@@ -131,22 +131,33 @@ def process_input_file(file_path: str, search_string=None):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        prog=sys.argv[0],
+        description="Prints Kindle highlights from a Kindle clippings",
+        epilog="Writes highlights to standard out, one highlight per line. \n"
+        "Strips trailing punctuation and lowercases single words.\n",
+    )
+    parser.add_argument("filename", help="Kindle clippings file")
+    parser.add_argument(
+        "-f", "--filter", help="Select only books with this title or author"
+    )
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "-w", "--words", help="Select only single words", action="store_true"
+    )
+    group.add_argument(
+        "-p", "--phrases", help="Select only phrases", action="store_true"
+    )
+    args = parser.parse_args()
+    print(f"filename    : {args.filename}")
+    print(f"--filter    : {args.filter}")
+    print(f"-w --words  : {args.words}")
+    print(f"-p --phrases: {args.phrases}")
 
-    if len(sys.argv) < 2 or len(sys.argv) > 3:
-        sys.stderr.write(
-            f"{sys.argv[0]} Parses a Kindle clippings file and prints highlights, one per line\n"
-        )
-        sys.stderr.write(
-            f"Usage: {sys.argv[0]} [options] file_to_process book_or_author_substring\n"
-            f"Options: --phrases --words --phrasesandwords\n"
-        )
-
-        exit(1)
-
-    start_time = time.time()
-    process_input_file(sys.argv[1], sys.argv[2])
-    end_time = time.time()
-    print("elapsed time: {:.4f} seconds".format(end_time - start_time))
+    # start_time = time.time()
+    process_input_file(args.filename, args.filter)
+    # end_time = time.time()
+    # print("elapsed time: {:.4f} seconds".format(end_time - start_time))
 
     exit(0)
 
