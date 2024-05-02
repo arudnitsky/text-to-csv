@@ -1,4 +1,7 @@
+import argparse
+import string
 import sys
+import time
 from io import TextIOWrapper
 from typing import Generator
 
@@ -15,15 +18,32 @@ class Clipping(BaseModel):
 
 
 def cleanup_line(line: str) -> str:
-    # remove punctuation if single word
-    # to lowercase if single word
     line = line.rstrip("\n")
-    # line = line.translate(
-    #     line.maketrans("", "", string.punctuation)
-    # )  # remove only the last character if punctuation
 
-    # line = line[:1].lower() + line[1:]
+    if not line:
+        return line
+
+    if line[0] == "=":
+        return line
+
+    if not " " in line:
+        # single word
+
+        # lowercase the first character
+        line = line[:1].lower() + line[1:]
+
+        if line[-1] in string.punctuation:
+            # remove trailing punctuation
+            line = line[:-1]
+
     return line
+
+
+def cleanup_clipping(clipping: Clipping) -> Clipping:
+    if type == "highlight":
+        for index in range(2, len(clipping) - 1):
+            clipping[index] = cleanup_line(clipping[index])
+    return clipping
 
 
 def dump_lines(lines: list[str]):
@@ -33,13 +53,15 @@ def dump_lines(lines: list[str]):
         line_number += 1
 
 
-def dump_clipping(clipping):
+def dump_chunk(chunk):
+    # only works correctly for type == "highlight"
+    # type "note" may be missing some lines
     print("Clipping:")
-    print(f" title_and_author:{clipping[0]}")
-    print(f" hightlight_location and time '{clipping[1]}'")
-    print(f" blank_line                   '{clipping[2]}'")
-    print(f" highlight                    '{clipping[3]}'")
-    print(f" separator                    '{clipping[4]}'")
+    print(f" title_and_author:{chunk[0]}")
+    print(f" hightlight_location and time '{chunk[1]}'")
+    print(f" blank_line                   '{chunk[2]}'")
+    print(f" highlight                    '{chunk[3]}'")
+    print(f" separator                    '{chunk[4]}'")
 
 
 def read_chunk(file_object: TextIOWrapper) -> list[str]:
@@ -51,7 +73,7 @@ def read_chunk(file_object: TextIOWrapper) -> list[str]:
         lines.append(cleanup_line(line))
         if "====" in line:
             break
-    # dump_lines(lines)
+    # dump_chunk(lines)
     return lines
 
 
@@ -78,6 +100,7 @@ def read_in_clipping(file_object: TextIOWrapper) -> Generator[Clipping, None, No
             dump_lines(lines)
             raise ValueError(f"No separator found in chunk near {line_number}")
 
+        # @@@@AMR Note that this does not correctly store all lines if len(lines) > 5
         clipping: Clipping = Clipping(
             type=type,
             title_and_author=lines[0],
@@ -96,26 +119,48 @@ def process_input_file(file_path: str, search_string=None):
             if not clipping:
                 break
             if clipping.type == "unknown":
-                break;
+                break
             if clipping.type == "highlight":
                 if search_string != None:
                     if search_string.casefold() in clipping.title_and_author.casefold():
                         if clipping.highlight != None:
+                            cleanup_clipping(clipping)
                             print(clipping.highlight)
                 else:
                     print(clipping.highlight)
 
 
 if __name__ == "__main__":
+
     if len(sys.argv) < 2 or len(sys.argv) > 3:
         sys.stderr.write(
-            f"{sys.argv[0]} Parses a Kindle clippings file and prints highlights\n"
+            f"{sys.argv[0]} Parses a Kindle clippings file and prints highlights, one per line\n"
         )
         sys.stderr.write(
-            f"Usage: {sys.argv[0]} file_to_process [optional book or author name]\n"
+            f"Usage: {sys.argv[0]} [options] file_to_process book_or_author_substring\n"
+            f"Options: --phrases --words --phrasesandwords\n"
         )
 
         exit(1)
 
-    process_input_file(sys.argv[1], sys.argv[2]) # fix this for no [2]
+    start_time = time.time()
+    process_input_file(sys.argv[1], sys.argv[2])
+    end_time = time.time()
+    print("elapsed time: {:.4f} seconds".format(end_time - start_time))
+
     exit(0)
+
+
+# def getTitles():
+#     "Returns alphabetically sorted list of titles. Removes duplicates."
+#     # to-do: allow sorting using keys- last read or alphabetically.
+#     from string import ascii_letters
+#     titles = []
+#     for unit in units:
+#         title = unit[0]
+#         # handling titles that start with u'\ufeff'.
+#         if title[0] not in ascii_letters:
+#             titles.append(title[1:])
+#         else:
+#             titles.append(title)
+#     return sorted(list(set(titles)))
