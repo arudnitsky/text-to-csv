@@ -2,6 +2,7 @@ import argparse
 import string
 import sys
 import time
+from argparse import Namespace
 from io import TextIOWrapper
 from typing import Generator
 
@@ -12,6 +13,7 @@ class Clipping(BaseModel):
     type: str
     title_and_author: str
     highlight_location_and_time: str
+    highlight_is_phrase: bool
     blank_line: str
     highlight: str
     separator: str
@@ -53,17 +55,6 @@ def dump_lines(lines: list[str]):
         line_number += 1
 
 
-def dump_chunk(chunk):
-    # only works correctly for type == "highlight"
-    # type "note" may be missing some lines
-    print("Clipping:")
-    print(f" title_and_author:{chunk[0]}")
-    print(f" hightlight_location and time '{chunk[1]}'")
-    print(f" blank_line                   '{chunk[2]}'")
-    print(f" highlight                    '{chunk[3]}'")
-    print(f" separator                    '{chunk[4]}'")
-
-
 def read_chunk(file_object: TextIOWrapper) -> list[str]:
     lines = []
     while True:
@@ -78,7 +69,6 @@ def read_chunk(file_object: TextIOWrapper) -> list[str]:
 
 
 def read_in_clipping(file_object: TextIOWrapper) -> Generator[Clipping, None, None]:
-    """Lazy function (generator) to read a file piece by piece and group them into Clipping instances."""
     line_number = 0
     type = "unknown"
     while True:
@@ -105,6 +95,7 @@ def read_in_clipping(file_object: TextIOWrapper) -> Generator[Clipping, None, No
             type=type,
             title_and_author=lines[0],
             highlight_location_and_time=lines[1],
+            highlight_is_phrase=" " in lines[3],
             blank_line=lines[2],
             highlight=lines[3],
             separator=lines[4],
@@ -113,16 +104,20 @@ def read_in_clipping(file_object: TextIOWrapper) -> Generator[Clipping, None, No
         yield clipping
 
 
-def process_input_file(file_path: str, filter=None):
-    with open(file_path, "r", encoding="utf-8-sig") as file:
+def process_input_file(args):
+    with open(args.filename, "r", encoding="utf-8-sig") as file:
         for clipping in read_in_clipping(file):
             if not clipping:
                 break
             if clipping.type == "unknown":
-                break
+                continue
             if clipping.type == "highlight":
-                if filter != None:
-                    if filter.casefold() in clipping.title_and_author.casefold():
+                if args.phrases == True and not clipping.highlight_is_phrase:
+                    continue
+                if args.words == True and clipping.highlight_is_phrase:
+                    continue
+                if args.filter != None:
+                    if args.filter.casefold() in clipping.title_and_author.casefold():
                         if clipping.highlight != None:
                             cleanup_clipping(clipping)
                             print(clipping.highlight)
@@ -130,7 +125,7 @@ def process_input_file(file_path: str, filter=None):
                     print(clipping.highlight)
 
 
-if __name__ == "__main__":
+def parse_command_line() -> Namespace:
     parser = argparse.ArgumentParser(
         prog=sys.argv[0],
         description="Prints Kindle highlights from a Kindle clippings",
@@ -148,16 +143,23 @@ if __name__ == "__main__":
     group.add_argument(
         "-p", "--phrases", help="Select only phrases", action="store_true"
     )
-    args = parser.parse_args()
-    print(f"filename    : {args.filename}")
-    print(f"--filter    : {args.filter}")
-    print(f"-w --words  : {args.words}")
-    print(f"-p --phrases: {args.phrases}")
+    args: Namespace = parser.parse_args()
 
-    # start_time = time.time()
-    process_input_file(args.filename, args.filter)
-    # end_time = time.time()
-    # print("elapsed time: {:.4f} seconds".format(end_time - start_time))
+    return args
+
+
+def time_function(function, args):
+    start_time = time.time()
+    function(args)
+    end_time = time.time()
+    print("elapsed time: {:.4f} seconds".format(end_time - start_time))
+
+
+if __name__ == "__main__":
+    args = parse_command_line()
+
+    # time_function(process_input_file, args)
+    process_input_file(args)
 
     exit(0)
 
