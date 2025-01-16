@@ -1,3 +1,5 @@
+#! /usr/bin/env python
+
 import argparse
 import string
 import sys
@@ -104,47 +106,72 @@ def read_in_clipping(file_object: TextIOWrapper) -> Generator[Clipping, None, No
         yield clipping
 
 
-def process_input_file(args):
+def getAllTitles(args):
+    titles = []
     with open(args.filename, "r", encoding="utf-8-sig") as file:
         for clipping in read_in_clipping(file):
-            if not clipping:
-                break
-            if clipping.type == "unknown":
-                continue
             if clipping.type == "highlight":
-                if args.phrases == True and not clipping.highlight_is_phrase:
+                titles.append(clipping.title_and_author)
+    return titles
+
+
+def process_input_file(args):
+    with open(args.filename, "r", encoding="utf-8-sig") as file:
+        if args.titles:
+            titles = getAllTitles(args)
+            for title in sorted(list(set(titles))):
+                print(title)
+        else:
+            for clipping in read_in_clipping(file):
+                if not clipping:
+                    break
+                if clipping.type == "unknown":
                     continue
-                if args.words == True and clipping.highlight_is_phrase:
-                    continue
-                if args.filter != None:
-                    if args.filter.casefold() in clipping.title_and_author.casefold():
-                        if clipping.highlight != None:
-                            cleanup_clipping(clipping)
-                            print(clipping.highlight)
-                else:
-                    print(clipping.highlight)
+                if clipping.type == "highlight":
+                    if args.phrases == True and not clipping.highlight_is_phrase:
+                        continue
+                    if args.words == True and clipping.highlight_is_phrase:
+                        continue
+                    if args.search != None:
+                        if (
+                            args.search.casefold()
+                            in clipping.title_and_author.casefold()
+                        ):
+                            if clipping.highlight != None:
+                                cleanup_clipping(clipping)
+                                print(clipping.highlight)
+                    else:
+                        print(clipping.highlight)
 
 
 def parse_command_line() -> Namespace:
     parser = argparse.ArgumentParser(
         prog=sys.argv[0],
-        description="Prints Kindle highlights from a Kindle clippings",
-        epilog="Writes highlights to standard out, one highlight per line. \n"
-        "Strips trailing punctuation and lowercases single words.\n",
+        description="Prints Kindle highlights from a Kindle clippings file.",
+        epilog="Writes highlights or titles to standard out, one per line. \n"
+        "Strips trailing punctuation and lowercases single words in highlights.\n",
     )
-    parser.add_argument("filename", help="Kindle clippings file")
     parser.add_argument(
-        "-f", "--filter", help="Select only books with this title or author"
+        "-f", "--filename",
+        default="/Volumes/Kindle/documents/My Clippings.txt",
+        help="Kindle clippings file (default: %(default)s)",
     )
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument(
+    highlights = parser.add_argument_group("highlights")
+    highlights.add_argument(
+        "-s", "--search", help="Select only books with this title or author"
+    )
+    highlight_group = highlights.add_mutually_exclusive_group()
+    highlight_group.add_argument(
         "-w", "--words", help="Select only single words", action="store_true"
     )
-    group.add_argument(
+    highlight_group.add_argument(
         "-p", "--phrases", help="Select only phrases", action="store_true"
     )
-    args: Namespace = parser.parse_args()
 
+    titles = parser.add_argument_group("titles")
+    titles.add_argument("-t", "--titles", help="List all titles", action="store_true")
+
+    args: Namespace = parser.parse_args()
     return args
 
 
